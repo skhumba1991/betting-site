@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filto Betting Site</title>
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; background: #f3f5f7; color: #333; }
+        header { background: #111827; color: white; padding: 20px; text-align: center; }
+        .container { max-width: 900px; margin: 25px auto; padding: 0 15px; display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+        .main-content, .sidebar { display: flex; flex-direction: column; gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .balance h2 { margin: 0; color: #111827; }
+        .match { margin: 15px 0; padding: 15px; border: 1px solid #e5e7eb; border-radius: 8px; }
+        .match h3 { margin-top: 0; font-size: 1.1rem; }
+        .odds-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+        button { padding: 12px 10px; border: 0; border-radius: 7px; cursor: pointer; background: #2563eb; color: white; font-weight: bold; transition: background 0.2s; }
+        button:hover { background: #1d4ed8; }
+        button.selected { background: #059669; }
+        input { width: 100%; box-sizing: border-box; padding: 12px; margin: 8px 0 15px; border: 1px solid #ccc; border-radius: 7px; }
+        .history-list { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; }
+        .history-list li { padding: 8px 0; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        #message { font-weight: bold; margin-top: 15px; color: #059669; }
+        .error { color: #dc2626 !important; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>filto betting site</h1>
+    <p>Sports Betting Simulation</p>
+</header>
+
+<div class="container">
+    <!-- Left Column: Matches & Actions -->
+    <div class="main-content">
+        <div class="card balance">
+            <h2>Balance: R<span id="balance">1000.00</span></h2>
+        </div>
+
+        <div class="card">
+            <h2>Live Matches</h2>
+            <div class="match">
+                <h3>Team A vs Team B</h3>
+                <div class="odds-row">
+                    <button onclick="selectBet('Team A vs Team B', 'Team A', 1.80, this)">Team A<br>1.80</button>
+                    <button onclick="selectBet('Team A vs Team B', 'Draw', 3.20, this)">Draw<br>3.20</button>
+                    <button onclick="selectBet('Team A vs Team B', 'Team B', 2.10, this)">Team B<br>2.10</button>
+                </div>
+            </div>
+            <div class="match">
+                <h3>Team C vs Team D</h3>
+                <div class="odds-row">
+                    <button onclick="selectBet('Team C vs Team D', 'Team C', 1.60, this)">Team C<br>1.60</button>
+                    <button onclick="selectBet('Team C vs Team D', 'Draw', 3.50, this)">Draw<br>3.50</button>
+                    <button onclick="selectBet('Team C vs Team D', 'Team D', 2.40, this)">Team D<br>2.40</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card withdraw">
+            <h2>Withdraw Funds</h2>
+            <label for="accountNumber">Account Number</label>
+            <input type="text" id="accountNumber" placeholder="Enter account number">
+            <label for="withdrawAmount">Amount (R)</label>
+            <input type="number" id="withdrawAmount" placeholder="Amount">
+            <button onclick="withdraw()" style="width: 100%;">Withdraw</button>
+            <p id="message"></p>
+        </div>
+    </div>
+
+    <!-- Right Column: Dynamic Bet Slip & History -->
+    <div class="sidebar">
+        <div class="card" id="betSlipCard">
+            <h2>Bet Slip</h2>
+            <div id="slipDetails" style="margin-bottom: 15px; font-size: 0.95rem; color: #666;">
+                Select odds from a match to start betting.
+            </div>
+            <div id="slipInputs" style="display: none;">
+                <label for="betAmount">Stake Amount (R):</label>
+                <input type="number" id="betAmount" value="100" oninput="calculateEstWin()">
+                <p style="margin: 5px 0 15px; font-size: 0.95rem;">Est. Return: <strong>R<span id="estWin">0.00</span></strong></p>
+                <button onclick="confirmBet()" style="width: 100%;">Place Bet</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Bet History</h2>
+            <ul id="history" class="history-list">
+                <li style="color: #888;">No bets placed yet.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    let balance = 1000.00;
+    let activeBet = null;
+
+    function updateBalance() {
+        document.getElementById("balance").textContent = balance.toFixed(2);
+    }
+
+    function selectBet(matchName, selection, odds, element) {
+        // Clear previous visual selections
+        document.querySelectorAll('.odds-row button').forEach(btn => btn.classList.remove('selected'));
+        
+        // Highlight chosen selection
+        element.classList.add('selected');
+
+        // Update Bet Slip state
+        activeBet = { matchName, selection, odds };
+        
+        document.getElementById("slipDetails").innerHTML = `
+            <strong>${matchName}</strong><br>
+            Market: Selected ${selection} @ ${odds.toFixed(2)}
+        `;
+        document.getElementById("slipInputs").style.display = "block";
+        calculateEstWin();
+    }
+
+    function calculateEstWin() {
+        if (!activeBet) return;
+        const stake = Number(document.getElementById("betAmount").value) || 0;
+        const potential = stake * activeBet.odds;
+        document.getElementById("estWin").textContent = potential.toFixed(2);
+    }
+
+    function confirmBet() {
+        const stake = Number(document.getElementById("betAmount").value);
+        const slipMessage = document.getElementById("message");
+        slipMessage.className = ""; // Reset styling class
+
+        if (!activeBet) return;
+        if (stake <= 0) {
+            alert("Please enter a valid stake amount.");
+            return;
+        }
+        if (balance < stake) {
+            alert("Insufficient balance for this stake.");
+            return;
+        }
+
+        // Process Balance
+        balance -= stake;
+        updateBalance();
+
+        // Append to history
+        const historyList = document.getElementById("history");
+        if(historyList.innerText.includes("No bets placed yet.")) historyList.innerHTML = "";
+        
+        const li = document.createElement("li");
+        li.innerHTML = `Placed <strong>R${stake.toFixed(2)}</strong> on ${activeBet.selection} (${activeBet.odds.toFixed(2)})`;
+        historyList.prepend(li);
+
+        alert(`Success! Bet placed on ${activeBet.selection} for R${stake.toFixed(2)}`);
+        
+        // Reset Slip
+        activeBet = null;
+        document.querySelectorAll('.odds-row button').forEach(btn => btn.classList.remove('selected'));
+        document.getElementById("slipDetails").textContent = "Select odds from a match to start betting.";
+        document.getElementById("slipInputs").style.display = "none";
+    }
+
+    function withdraw() {
+        const account = document.getElementById("accountNumber").value.trim();
+        const amount = Number(document.getElementById("withdrawAmount").value);
+        const message = document.getElementById("message");
+        message.className = ""; 
+
+        if (account.length < 5) {
+            message.textContent = "Enter a valid account number.";
+            message.classList.add("error");
+            return;
+        }
+        if (amount <= 0) {
+            message.textContent = "Enter a valid withdrawal amount.";
+            message.classList.add("error");
+            return;
+        }
+        if (amount > balance) {
+            message.textContent = "Insufficient balance.";
+            message.classList.add("error");
+            return;
+        }
+
+        balance -= amount;
+        updateBalance();
+        
+        message.textContent = `Withdrawal of R${amount.toFixed(2)} requested for account ending ...${account.slice(-4)}.`;
+        document.getElementById("withdrawAmount").value = "";
+    }
+</script>
+</body>
+</html>
